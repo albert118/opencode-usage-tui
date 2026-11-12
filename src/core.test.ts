@@ -265,6 +265,7 @@ describe("parseOptions", () => {
       endpoint: "https://example.invalid/auth",
       lowThreshold: 5,
       authPath: "C:\\Users\\me\\opencode\\auth.json",
+      envVar: DEFAULT_OPTIONS.envVar,
       verbose: false,
       provider: "openrouter",
       apiKey: "",
