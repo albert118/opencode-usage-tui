@@ -1,0 +1,30 @@
+README.md
+  s_6ab8dc5f513cd1::t_cda7e4a7b8c782 154
+  s_6ab8dc5f513cd1::t_661491312e6844 163,165
+src/core.test.ts
+  s_6ab8dc5f513cd1::t_b2b1e8ca629cba 268
+src/providers/openrouter.ts
+  s_6ab8dc5f513cd1::t_3ba29dc32fa570 17-18
+src/core.ts
+  s_6ab8dc5f513cd1::t_d39d59b88f8b27 94
+  s_6ab8dc5f513cd1::t_952dfc2bb0a150 43
+  s_6ab8dc5f513cd1::t_96ed17988d1637 269-270
+src/providers/openrouter.test.ts
+  s_6ab8dc5f513cd1::t_299aa801ddabb8 1-77
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a381209907c804d270d5b3d6a5dacd30dd9b9ce2",
+  "prompts": {},
+  "sessions": {
+    "s_6ab8dc5f513cd1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_e3235d64fffeCx2xcgDoXxsHis",
+        "model": "unknown"
+      },
+      "human_author": "albert118 <albertferguson118@gmail.com>"
+    }
+  }
+}
