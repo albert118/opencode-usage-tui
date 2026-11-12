@@ -14,6 +14,8 @@ export function readOpenRouterKey(authPath: string): string | null {
 }
 
 export function resolveKey(opts: Options): string | null {
+  const fromEnv = process.env[opts.envVar ?? "OPENROUTER_API_KEY"]
+  if (typeof fromEnv === "string" && fromEnv.length > 0) return fromEnv
   return readOpenRouterKey(opts.authPath)
 }
 

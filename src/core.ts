@@ -40,6 +40,7 @@ export type Options = {
   endpoint: string
   lowThreshold: number
   authPath: string
+  envVar: string
   verbose: boolean
   provider: ProviderId
   apiKey: string
@@ -90,6 +91,7 @@ export const DEFAULT_OPTIONS: Options = {
   endpoint: "https://openrouter.ai/api/v1/auth/key",
   lowThreshold: 10,
   authPath: defaultAuthPath(),
+  envVar: "OPENROUTER_API_KEY",
   verbose: false,
   provider: "openrouter",
   apiKey: "",
@@ -264,6 +266,8 @@ export function parseOptions(raw: unknown): Options {
         : DEFAULT_OPTIONS.lowThreshold,
     authPath:
       typeof opts.authPath === "string" && opts.authPath.length > 0 ? opts.authPath : DEFAULT_OPTIONS.authPath,
+    envVar:
+      typeof opts.envVar === "string" && opts.envVar.length > 0 ? opts.envVar : DEFAULT_OPTIONS.envVar,
     verbose: typeof opts.verbose === "boolean" ? opts.verbose : DEFAULT_OPTIONS.verbose,
     provider:
       opts.provider === "openrouter" || opts.provider === "weave"
