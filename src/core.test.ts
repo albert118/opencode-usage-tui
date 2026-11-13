@@ -1,4 +1,6 @@
 import { describe, expect, it } from "bun:test"
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs"
+import { tmpdir } from "node:os"
 import { join } from "node:path"
 import {
   DEFAULT_OPTIONS,
@@ -7,20 +9,20 @@ import {
   daysLeft,
   defaultAuthPath,
   formatDaysLeft,
-  formatSpendPerDay,
   initialSnapshot,
   isSnapshot,
   num,
   parseOptions,
   pctOf,
+  resolveKey,
   slotSpec,
-  spendPerDay,
   tierColor,
   tierColorVariant,
   tierOf,
   tierThemeToken,
   usd,
   widgetText,
+  type Options,
   type Snapshot,
 } from "./core"
 
@@ -166,60 +168,6 @@ describe("widgetText", () => {
     const s = snap({ limit: null, usageWeekly: 10, usageMonthly: 40, daysLeft: null, freeRemaining: 5 })
     expect(widgetText(s, true)).toBe("Credits · ⚪ $10.00 used · weekly (no limit set) · free 5 · mo $40.00")
   })
-  it("shows spend mode with spent and request count", () => {
-    const s = { ...EMPTY, ok: true, mode: "spend", spentUsd: 12.34, requestCount: 850, fetchedAt: 1 }
-    expect(widgetText(s)).toBe("Spend · $12.34 · 850 req")
-  })
-  it("appends a per-day burn in spend mode when computable", () => {
-    const s = { ...EMPTY, ok: true, mode: "spend", spentUsd: 12.34, requestCount: 850, fetchedAt: 1 }
-    expect(widgetText(s, false, 2.1)).toBe("Spend · $12.34 · 850 req · ≈$2.1/day")
-  })
-  it("omits the per-day burn when null", () => {
-    const s = { ...EMPTY, ok: true, mode: "spend", spentUsd: 12.34, requestCount: 850, fetchedAt: 1 }
-    expect(widgetText(s, false, null)).toBe("Spend · $12.34 · 850 req")
-  })
-})
-
-describe("spendPerDay", () => {
-  it("is null when either snapshot is not ok", () => {
-    const prevNotOk = { ...EMPTY, fetchedAt: 0 }
-    const ok = { ...EMPTY, ok: true, mode: "spend", spentUsd: 10, fetchedAt: 1 }
-    expect(spendPerDay(prevNotOk, ok)).toBeNull()
-    expect(spendPerDay(ok, prevNotOk)).toBeNull()
-  })
-  it("is null when spentUsd is missing", () => {
-    const previous = { ...EMPTY, ok: true, mode: "spend", spentUsd: 10, fetchedAt: 1000 }
-    const noSpend = { ...EMPTY, ok: true, mode: "spend", spentUsd: null, fetchedAt: 1000 + 2 * 86_400_000 }
-    expect(spendPerDay(previous, noSpend)).toBeNull()
-  })
-  it("is null when elapsed time is too short", () => {
-    const previous = { ...EMPTY, ok: true, mode: "spend", spentUsd: 10, fetchedAt: 1000 }
-    const current = { ...EMPTY, ok: true, mode: "spend", spentUsd: 12, fetchedAt: 1000 + 1000 }
-    expect(spendPerDay(previous, current)).toBeNull()
-  })
-  it("is null when spend did not increase", () => {
-    const previous = { ...EMPTY, ok: true, mode: "spend", spentUsd: 10, fetchedAt: 1000 }
-    const same = { ...EMPTY, ok: true, mode: "spend", spentUsd: 10, fetchedAt: 1000 + 2 * 86_400_000 }
-    const decreased = { ...EMPTY, ok: true, mode: "spend", spentUsd: 9, fetchedAt: 1000 + 2 * 86_400_000 }
-    expect(spendPerDay(previous, same)).toBeNull()
-    expect(spendPerDay(previous, decreased)).toBeNull()
-  })
-  it("computes spend per day from the delta", () => {
-    const previous = { ...EMPTY, ok: true, mode: "spend", spentUsd: 10, fetchedAt: 1000 }
-    const current = { ...EMPTY, ok: true, mode: "spend", spentUsd: 14.2, fetchedAt: 1000 + 2 * 86_400_000 }
-    expect(spendPerDay(previous, current)).toBeCloseTo(2.1)
-  })
-})
-
-describe("formatSpendPerDay", () => {
-  it("formats as a single-decimal USD per day", () => {
-    expect(formatSpendPerDay(2.1)).toBe("≈$2.1/day")
-    expect(formatSpendPerDay(12.34)).toBe("≈$12.3/day")
-  })
-  it("returns null for invalid input", () => {
-    expect(formatSpendPerDay(-1)).toBeNull()
-    expect(formatSpendPerDay(Infinity)).toBeNull()
-  })
 })
 
 describe("tierColor", () => {
@@ -267,9 +215,6 @@ describe("parseOptions", () => {
       authPath: "C:\\Users\\me\\opencode\\auth.json",
       envVar: DEFAULT_OPTIONS.envVar,
       verbose: false,
-      provider: "openrouter",
-      apiKey: "",
-      baseUrl: DEFAULT_OPTIONS.baseUrl,
     })
   })
   it("falls back per-field on invalid values", () => {
@@ -290,24 +235,79 @@ describe("parseOptions", () => {
     expect(parseOptions({ verbose: true }).verbose).toBe(true)
     expect(parseOptions({ verbose: "yes" }).verbose).toBe(false)
   })
-  it("accepts a valid provider and falls back on invalid ones", () => {
-    expect(parseOptions({ provider: "weave" }).provider).toBe("weave")
-    expect(parseOptions({ provider: "openrouter" }).provider).toBe("openrouter")
-    expect(parseOptions({ provider: "anthropic" }).provider).toBe("openrouter")
-    expect(parseOptions({ provider: 42 }).provider).toBe("openrouter")
+  it("ignores obsolete provider/apiKey/baseUrl options", () => {
+    expect(parseOptions({ provider: "weave", apiKey: "ra_x", baseUrl: "https://x" })).toEqual(DEFAULT_OPTIONS)
   })
-  it("keeps non-empty apiKey and falls back to empty", () => {
-    expect(parseOptions({ apiKey: "ra_abc123" }).apiKey).toBe("ra_abc123")
-    expect(parseOptions({ apiKey: "" }).apiKey).toBe("")
-    expect(parseOptions({ apiKey: 42 }).apiKey).toBe("")
-    expect(parseOptions(undefined).apiKey).toBe("")
+})
+
+const ENV_VAR = "OPENROUTER_API_KEY"
+
+function opts(overrides: Partial<Options> = {}): Options {
+  return { ...DEFAULT_OPTIONS, ...overrides }
+}
+
+function tmpAuthFile(key: string): string {
+  const dir = mkdtempSync(join(tmpdir(), "usage-tui-openrouter-"))
+  writeFileSync(join(dir, "auth.json"), JSON.stringify({ openrouter: { type: "api", key } }))
+  return join(dir, "auth.json")
+}
+
+function withEnv(name: string, value: string | undefined, fn: () => void) {
+  const previous = process.env[name]
+  if (value === undefined) delete process.env[name]
+  else process.env[name] = value
+  try {
+    fn()
+  } finally {
+    if (previous === undefined) delete process.env[name]
+    else process.env[name] = previous
+  }
+}
+
+describe("resolveKey", () => {
+  it("returns the OPENROUTER_API_KEY env var when set", () => {
+    withEnv(ENV_VAR, "sk-or-env", () => {
+      expect(resolveKey(opts())).toBe("sk-or-env")
+    })
   })
-  it("keeps non-empty baseUrl and falls back to the hosted default", () => {
-    expect(parseOptions({ baseUrl: "https://weave.example.invalid" }).baseUrl).toBe(
-      "https://weave.example.invalid",
-    )
-    expect(parseOptions({ baseUrl: "" }).baseUrl).toBe(DEFAULT_OPTIONS.baseUrl)
-    expect(parseOptions({ baseUrl: 42 }).baseUrl).toBe(DEFAULT_OPTIONS.baseUrl)
+
+  it("prefers the env var over auth.json", () => {
+    const authPath = tmpAuthFile("sk-or-file")
+    try {
+      withEnv(ENV_VAR, "sk-or-env", () => {
+        expect(resolveKey(opts({ authPath }))).toBe("sk-or-env")
+      })
+    } finally {
+      rmSync(authPath, { recursive: true, force: true })
+    }
+  })
+
+  it("falls back to auth.json when the env var is unset", () => {
+    const authPath = tmpAuthFile("sk-or-file")
+    try {
+      withEnv(ENV_VAR, undefined, () => {
+        expect(resolveKey(opts({ authPath }))).toBe("sk-or-file")
+      })
+    } finally {
+      rmSync(authPath, { recursive: true, force: true })
+    }
+  })
+
+  it("treats an empty env var as unset and falls back", () => {
+    const authPath = tmpAuthFile("sk-or-file")
+    try {
+      withEnv(ENV_VAR, "", () => {
+        expect(resolveKey(opts({ authPath }))).toBe("sk-or-file")
+      })
+    } finally {
+      rmSync(authPath, { recursive: true, force: true })
+    }
+  })
+
+  it("honours a custom env var name via options", () => {
+    withEnv("MY_ROUTER_KEY", "sk-or-custom", () => {
+      expect(resolveKey(opts({ envVar: "MY_ROUTER_KEY" }))).toBe("sk-or-custom")
+    })
   })
 })
 
@@ -408,10 +408,6 @@ describe("buildStatusLine", () => {
     expect(buildStatusLine(s, { ...DEFAULT_OPTIONS, verbose: true })).toBe(
       "Credits · 🟢 $75.00 / $100.00 (75%) · weekly · ≈5d left · free 12 · wk $25.00 · mo $40.00",
     )
-  })
-  it("appends the spend burn wrapper", () => {
-    const s = { ...EMPTY, ok: true, mode: "spend", spentUsd: 12.34, requestCount: 850, fetchedAt: 1 }
-    expect(buildStatusLine(s, DEFAULT_OPTIONS, 2.1)).toBe("Spend · $12.34 · 850 req · ≈$2.1/day")
   })
 })
 

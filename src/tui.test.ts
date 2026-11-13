@@ -98,7 +98,6 @@ describe("usage plugin (fake context)", () => {
     const stored: Snapshot = {
       ...EMPTY,
       ok: true,
-      mode: "balance",
       remaining: 75,
       limit: 100,
       reset: "weekly",
@@ -128,7 +127,6 @@ describe("usage plugin (fake context)", () => {
       await sleep(20)
       const value = fake.stores.get("snapshot")?.value as Snapshot
       expect(value.ok).toBe(true)
-      expect(value.mode).toBe("balance")
       expect(value.remaining).toBe(80)
       expect(value.limit).toBe(100)
       expect(value.loading).toBe(false)
@@ -188,27 +186,6 @@ describe("usage plugin (fake context)", () => {
     } finally {
       cleanup()
       rmSync(join(authPath, ".."), { recursive: true, force: true })
-    }
-  })
-
-  it("never notifies in spend mode", async () => {
-    globalThis.fetch = async () =>
-      new Response(
-        [JSON.stringify({ actual_input_cost_usd: 1, actual_output_cost_usd: 2 })].join("\n"),
-        { status: 200 },
-      )
-    const fake = createFakeContext({
-      options: { provider: "weave", apiKey: "ra_test", baseUrl: "https://router.workweave.ai", refreshIntervalMs: 10 },
-    })
-    const cleanup = plugin.setup(fake.context as any)
-    try {
-      await sleep(50)
-      expect(fake.notifies).toHaveLength(0)
-      const value = fake.stores.get("snapshot")?.value as Snapshot
-      expect(value.ok).toBe(true)
-      expect(value.mode).toBe("spend")
-    } finally {
-      cleanup()
     }
   })
 })
