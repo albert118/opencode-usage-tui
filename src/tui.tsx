@@ -1,5 +1,5 @@
 /**
- * OpenRouter usage widget for the opencode v2 TUI.
+ * OpenRouter/Weave usage widget for the opencode v2 TUI.
  *
  * Port of the v1 plugin onto the v2 `@opencode/plugin/tui` SDK: a durable
  * snapshot store (seeded from the previous run, cleared of the stale
@@ -22,6 +22,7 @@ import {
   initialSnapshot,
   parseOptions,
   slotSpec,
+  spendPerDay,
   tierColorVariant,
   tierOf,
   tierThemeToken,
@@ -56,6 +57,7 @@ export default {
       })
     }
 
+    let burn: number | null = null
     let firstFetch = true
     let lowNotified = false
     const controller = new AbortController()
@@ -73,7 +75,7 @@ export default {
             paddingRight={1}
           >
             <text fg={themeToken(theme, tierThemeToken(tierOf(s))) ?? theme.text.base}>
-              {buildStatusLine(s, opts)}
+              {buildStatusLine(s, opts, burn)}
             </text>
           </box>
         )
@@ -92,6 +94,7 @@ export default {
         loading: false,
         error: fresh.ok ? undefined : fresh.error,
       }
+      burn = fresh.mode === "spend" ? spendPerDay(previous, fresh) : null
       // Write back good data, or degrade the display when we have none yet;
       // transient failures keep the last-known good snapshot painted.
       if (fresh.ok || !previous.ok) {
@@ -99,7 +102,7 @@ export default {
           Object.assign(draft, settled)
         })
       }
-      if (fresh.ok && fresh.remaining !== null && fresh.remaining < opts.lowThreshold) {
+      if (fresh.mode === "balance" && fresh.ok && fresh.remaining !== null && fresh.remaining < opts.lowThreshold) {
         if (!lowNotified) {
           lowNotified = true
           void context.attention.notify({
