@@ -1,0 +1,31 @@
+src/core.ts
+  s_ef0184ab0da7f1::t_afbc69d1dabc71 1,101-166,216,320-322
+package.json
+  s_ef0184ab0da7f1::t_da108ccc82275a 3
+src/tui.tsx
+  s_ef0184ab0da7f1::t_a23b8e6dc839f5 2
+  s_ef0184ab0da7f1::t_0931a9dc59751a 76
+  s_ef0184ab0da7f1::t_bcb40b02e4b122 102
+README.md
+  s_ef0184ab0da7f1::t_0be9a7a67b5897 158
+  s_ef0184ab0da7f1::t_7ddd61857e40ef 204
+  s_ef0184ab0da7f1::t_b8fc5d5096488b 54
+src/core.test.ts
+  s_ef0184ab0da7f1::t_7e3e68d9ae83a2 2-3,17,25,238-310,418
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "22f8525608c504f9c15683cef3d2c6cc83d9d6c7",
+  "prompts": {},
+  "sessions": {
+    "s_ef0184ab0da7f1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_e2d6a187bffe6Jh05umudZt3tr",
+        "model": "unknown"
+      },
+      "human_author": "albertAtPropertyMe <albertferguson@propertyme.com>"
+    }
+  }
+}
