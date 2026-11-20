@@ -1,0 +1,19 @@
+package.json
+  s_f4ae16d488fe82::t_6065fbbcaa34af 3
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "da586205809bb51f686be5feed51a344db768219",
+  "prompts": {},
+  "sessions": {
+    "s_f4ae16d488fe82": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d4caff08-eb65-4008-821a-5d3e3a30268b",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "albert118 <albertferguson118@gmail.com>"
+    }
+  }
+}
